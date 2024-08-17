@@ -2,15 +2,15 @@
 
 ## Mục lục
 1. [Tổng quan](#1-tổng-quan)
-2. [Giới thiệu](#2-giới-thiệu)
-3. [Kiến trúc Hệ thống](#3-kiến-trúc-hệ-thống)
-4. [Giao diện Người dùng](#4-giao-diện-người-dùng)
-5. [Thành phần phía Client](#5-thành-phần-phía-client)
-6. [Thành phần phía Server](#6-thành-phần-phía-server)
-7. [Giao thức giao tiếp (Protocol Communication)](#7-giao-thức-giao-tiếp-protocol-communication)
-8. [Xử lý File Lớn](#8-xử-lý-file-lớn)
-9. [Bảo mật](#9-bảo-mật)
-10. [Hướng dẫn chạy phần mềm](#10-hướng-dẫn-chạy-phần-mềm)
+2. [Hướng dẫn chạy phần mềm](#2-hướng-dẫn-chạy-phần-mềm)
+3. [Giới thiệu](#3-giới-thiệu)
+4. [Kiến trúc Hệ thống](#4-kiến-trúc-hệ-thống)
+5. [Giao diện Người dùng](#5-giao-diện-người-dùng)
+6. [Thành phần phía Client](#6-thành-phần-phía-client)
+7. [Thành phần phía Server](#7-thành-phần-phía-server)
+8. [Giao thức giao tiếp (Protocol Communication)](#8-giao-thức-giao-tiếp-protocol-communication)
+9. [Xử lý File Lớn](#9-xử-lý-file-lớn)
+10. [Bảo mật](#10-bảo-mật)
 11. [Kết luận và Hướng phát triển](#11-kết-luận-và-hướng-phát-triển)
 12. [Phụ lục](#12-phụ-lục)
 13. [Tài liệu tham khảo](#13-tài-liệu-tham-khảo)
@@ -21,9 +21,37 @@ Transfer Trail là một ứng dụng truyền file client-server được phát
 
 Báo cáo này trình bày chi tiết về kiến trúc, thiết kế và triển khai của Transfer Trail, bao gồm các khía cạnh kỹ thuật, giao diện người dùng, và các tính năng chính của ứng dụng.
 
-## 2. Giới thiệu
+## 2. Hướng dẫn chạy phần mềm
 
-### 2.1 Công nghệ và Thư viện
+### 2.1 Yêu cầu Hệ thống
+
+- Node.js v20.15.1 trở lên ([Link](https://nodejs.org/en)).
+- Python 3.12.3 trở lên ([Link](https://www.python.org/downloads/)).
+- Electron (sẽ được cài đặt tự động qua npm)
+
+### 2.2 Cài đặt
+
+1. Clone repository hoặc tải source code trên moodle:
+   ```
+   git clone https://github.com/petiheo/TransferTrail
+   cd transferTrail
+   ```
+
+2. Cài đặt dependencies:
+   ```
+   npm install
+   ```
+
+3. Cấu hình:
+   - Chỉnh sửa file `config.json` để cấu hình địa chỉ IP và cổng của server.
+
+4. Chạy ứng dụng:
+   - Server: `python server/app.py`
+   - Client: `npm start`
+
+## 3. Giới thiệu
+
+### 3.1 Công nghệ và Thư viện
 
 Transfer Trail được xây dựng dựa trên các công nghệ và thư viện sau:
 
@@ -32,7 +60,7 @@ Transfer Trail được xây dựng dựa trên các công nghệ và thư việ
 3. **Python**: Ngôn ngữ lập trình cho phía server (Python 3.12.3 trở lên).
 4. **Socket Programming**: Kỹ thuật lập trình cho giao tiếp mạng.
 
-#### 2.1.1 Thư viện chuẩn Python
+#### 3.1.1 Thư viện chuẩn Python
 
 - `socket`: Cho lập trình mạng
 - `threading`: Để xử lý đa luồng
@@ -42,7 +70,7 @@ Transfer Trail được xây dựng dựa trên các công nghệ và thư việ
 - `uuid`: Để tạo các định danh duy nhất
 - `hashlib`: Cho việc tính toán MD5 hash
 
-#### 2.1.2 Module Node.js
+#### 3.1.2 Module Node.js
 
 - `path`: Để xử lý đường dẫn file
 - `os`: Cho các thao tác hệ điều hành
@@ -50,7 +78,7 @@ Transfer Trail được xây dựng dựa trên các công nghệ và thư việ
 - `child_process`: Để chạy các script Python
 - `fs`: Cho các thao tác file system
 
-### 2.2 Tính năng chính
+### 3.2 Tính năng chính
 
 1. Truyền file đa luồng
 2. Hỗ trợ file có kích thước lớn
@@ -59,9 +87,9 @@ Transfer Trail được xây dựng dựa trên các công nghệ và thư việ
 5. Hiển thị tiến trình truyền file theo thời gian thực
 6. Tự động phân loại file theo định dạng
 
-## 3. Kiến trúc Hệ thống
+## 4. Kiến trúc Hệ thống
 
-### 3.1 Tổng quan Kiến trúc
+### 4.1 Tổng quan Kiến trúc
 
 Transfer Trail sử dụng kiến trúc client-server, kết hợp với mô hình ứng dụng desktop của Electron. Kiến trúc này cho phép ứng dụng hoạt động hiệu quả trên nhiều nền tảng khác nhau, đồng thời tận dụng được sức mạnh của cả JavaScript và Python.
 
@@ -78,7 +106,7 @@ graph TD
 
 Hình 1: Kiến trúc tổng thể của Transfer Trail
 
-### 3.2 Lý do chọn Electron và Python
+### 4.2 Lý do chọn Electron và Python
 
 1. **Electron**: 
    - Cho phép phát triển ứng dụng desktop đa nền tảng với công nghệ web.
@@ -92,9 +120,9 @@ Hình 1: Kiến trúc tổng thể của Transfer Trail
 
 Sự kết hợp này cho phép tận dụng ưu điểm của cả hai công nghệ: giao diện người dùng linh hoạt của Electron và khả năng xử lý mạng mạnh mẽ của Python.
 
-## 4. Giao diện Người dùng
+## 5. Giao diện Người dùng
 
-### 4.1 Tổng quan Giao diện
+### 5.1 Tổng quan Giao diện
 
 Giao diện người dùng của Transfer Trail được thiết kế với mục tiêu đơn giản, trực quan và dễ sử dụng. Nó bao gồm các thành phần chính sau:
 
@@ -104,7 +132,7 @@ Giao diện người dùng của Transfer Trail được thiết kế với mụ
 4. Thanh tiến trình (Progress bar)
 5. Thông báo (Notifications)
 
-### 4.2 Các thành phần UI chính
+### 5.2 Các thành phần UI chính
 
 | Thành phần | Chức năng |
 |------------|-----------|
@@ -114,7 +142,7 @@ Giao diện người dùng của Transfer Trail được thiết kế với mụ
 | Thanh tiến trình | Hiển thị tiến độ tải lên/tải xuống file |
 | Thông báo | Cung cấp phản hồi về các hoạt động và trạng thái của ứng dụng |
 
-### 4.3 Hình ảnh Giao diện
+### 5.3 Hình ảnh Giao diện
 
 ![Main Interface](./images/main-interface.png)
 *Hình 2: Giao diện chính của Transfer Trail*
@@ -131,9 +159,9 @@ Giao diện người dùng của Transfer Trail được thiết kế với mụ
 ![Error Notification](./images/error-notification.png)
 *Hình 6: Thông báo lỗi*
 
-## 5. Thành phần phía Client
+## 6. Thành phần phía Client
 
-### 5.1 Giới thiệu về Electron
+### 6.1 Giới thiệu về Electron
 
 Electron là một framework mã nguồn mở cho phép phát triển ứng dụng desktop đa nền tảng sử dụng các công nghệ web. Nó kết hợp Chromium và Node.js vào một runtime duy nhất, cho phép xây dựng ứng dụng bằng HTML, CSS, và JavaScript.
 
@@ -159,7 +187,7 @@ graph TD
 
 Hình 7: Cấu trúc cơ bản của ứng dụng Electron
 
-### 5.2 Cấu trúc Thành phần Client
+### 6.2 Cấu trúc Thành phần Client
 
 ```mermaid
 graph TD
@@ -181,29 +209,29 @@ graph TD
 
 Hình 8: Cấu trúc thành phần phía Client
 
-#### 5.2.1 Python Scripts
+#### 6.2.1 Python Scripts
 
 - `download_file.py`: Xử lý tải file từ server.
 - `upload_file.py`: Quản lý quá trình tải file lên server.
 - `list_files.py`: Lấy danh sách file từ server.
 
-#### 5.2.2 Electron Main Process
+#### 6.2.2 Electron Main Process
 
 - `app.js`: Khởi tạo ứng dụng và quản lý vòng đời.
 - `ipcHandlers.js`: Xử lý các sự kiện IPC giữa Main Process và Renderer Process.
 
-#### 5.2.3 Electron Renderer Process
+#### 6.2.3 Electron Renderer Process
 
 - `main.js`: Khởi tạo giao diện người dùng và xử lý tương tác.
 - `fileHandlers.js`: Quản lý các hoạt động liên quan đến file.
 - `uiHandlers.js`: Cập nhật giao diện người dùng.
 - `notifications.js`: Hiển thị thông báo cho người dùng.
 
-#### 5.2.4 IPC Communication
+#### 6.2.4 IPC Communication
 
 - `preload.js`: Cầu nối giữa Main Process và Renderer Process, cung cấp các API an toàn cho Renderer Process.
 
-### 5.3 Luồng Dữ liệu
+### 6.3 Luồng Dữ liệu
 
 ```mermaid
 sequenceDiagram
@@ -225,9 +253,9 @@ sequenceDiagram
 
 Hình 9: Luồng dữ liệu trong ứng dụng Transfer Trail
 
-## 6. Thành phần phía Server
+## 7. Thành phần phía Server
 
-### 6.1 Cấu trúc Server
+### 7.1 Cấu trúc Server
 
 ```mermaid
 graph TD
@@ -244,7 +272,7 @@ graph TD
 
 Hình 10: Cấu trúc thành phần phía Server
 
-### 6.2 Chức năng các Module
+### 7.2 Chức năng các Module
 
 - `app.py`: Thiết lập server và xử lý kết nối client.
 - `download_handler.py`: Xử lý yêu cầu tải xuống file.
@@ -255,7 +283,7 @@ Hình 10: Cấu trúc thành phần phía Server
 - `models/file_info.py`: Định nghĩa cấu trúc thông tin file.
 - `models/message_structure.py`: Định nghĩa cấu trúc message giao tiếp.
 
-### 6.3 Xử lý Đồng thời
+### 7.3 Xử lý Đồng thời
 
 Server sử dụng mô hình đa luồng để xử lý đồng thời nhiều yêu cầu từ client:
 
@@ -263,9 +291,9 @@ Server sử dụng mô hình đa luồng để xử lý đồng thời nhiều y
 2. Sử dụng threading pool để quản lý hiệu quả các luồng.
 3. Áp dụng lock để đồng bộ hóa truy cập vào tài nguyên chia sẻ.
 
-## 7. Giao thức giao tiếp (Protocol Communication)
+## 8. Giao thức giao tiếp (Protocol Communication)
 
-### 7.1 Cấu trúc Message
+### 8.1 Cấu trúc Message
 
 Mỗi message giữa client và server có cấu trúc như sau:
 
@@ -281,7 +309,7 @@ graph LR
 
 Hình 11: Cấu trúc message
 
-### 7.2 Các loại Yêu cầu và Phản hồi
+### 8.2 Các loại Yêu cầu và Phản hồi
 
 | Opcode | Ý nghĩa |
 | --- | --- |
@@ -298,7 +326,7 @@ Hình 11: Cấu trúc message
 | 11 | FILE_MD5 |
 | 12 | ERROR |
 
-### 7.3 Quy trình giao tiếp
+### 8.3 Quy trình giao tiếp
 
 #### File Download Process
 
@@ -343,70 +371,42 @@ sequenceDiagram
 
 Hình 13: Quy trình giao tiếp khi upload file
 
-## 8. Xử lý File Lớn
+## 9. Xử lý File Lớn
 
-### 8.1 Phân chia File
+### 9.1 Phân chia File
 
 - File được chia thành nhiều phần nhỏ, mỗi phần có kích thước cố định.
 - Số lượng phần được xác định dựa trên kích thước file và cấu hình server.
 
-### 8.2 Truyền Đa luồng
+### 9.2 Truyền Đa luồng
 
 - Mỗi phần file được truyền qua một luồng riêng biệt.
 - Sử dụng nhiều kết nối socket đồng thời để tối ưu hóa tốc độ truyền.
 
-### 8.3 Quản lý Bộ nhớ
+### 9.3 Quản lý Bộ nhớ
 
 - Sử dụng kỹ thuật streaming để đọc và ghi file theo từng chunk nhỏ.
 - Áp dụng cơ chế buffer để cân bằng giữa hiệu suất và sử dụng bộ nhớ.
 - Sau khi nhận một chunk thành công, chương trình sẽ lưu vào ROM để tránh tràn bộ nhớ đệm buffer.
 
-### 8.4 Khôi phục Truyền
+### 9.4 Khôi phục Truyền
 
 - Lưu trữ trạng thái truyền của từng phần file.
 - Cho phép tiếp tục truyền từ điểm gián đoạn nếu có lỗi xảy ra.
 
-## 9. Bảo mật
+## 10. Bảo mật
 
-### 9.1 Biện pháp Bảo mật Hiện tại
+### 10.1 Biện pháp Bảo mật Hiện tại
 
 1. Sử dụng MD5 hash để xác minh tính toàn vẹn của file sau khi truyền.
 2. Giới hạn quyền truy cập vào thư mục chứa file trên server.
 
-### 9.2 Kế hoạch Bảo mật Tương lai
+### 10.2 Kế hoạch Bảo mật Tương lai
 
 1. Triển khai mã hóa end-to-end cho quá trình truyền file.
 2. Tích hợp hệ thống xác thực người dùng.
 3. Áp dụng HTTPS cho giao tiếp giữa client và server.
 4. Triển khai cơ chế kiểm soát truy cập dựa trên vai trò.
-
-## 10. Hướng dẫn chạy phần mềm
-
-### 10.1 Yêu cầu Hệ thống
-
-- Node.js v20.15.1 trở lên ([Link](https://nodejs.org/en)).
-- Python 3.12.3 trở lên ([Link](https://www.python.org/downloads/)).
-- Electron (sẽ được cài đặt tự động qua npm)
-
-### 10.2 Cài đặt
-
-1. Clone repository hoặc tải source code trên moodle:
-   ```
-   git clone https://github.com/petiheo/TransferTrail
-   cd transferTrail
-   ```
-
-2. Cài đặt dependencies:
-   ```
-   npm install
-   ```
-
-3. Cấu hình:
-   - Chỉnh sửa file `config.json` để cấu hình địa chỉ IP và cổng của server.
-
-4. Chạy ứng dụng:
-   - Server: `python server/app.py`
-   - Client: `npm start`
 
 ## 11. Kết luận và Hướng phát triển
 
