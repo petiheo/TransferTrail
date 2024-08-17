@@ -46,7 +46,7 @@ Báo cáo này trình bày chi tiết về kiến trúc, thiết kế và triể
    - Chỉnh sửa file `config.json` để cấu hình địa chỉ IP và cổng của server.
 
 4. Chạy ứng dụng:
-   - Server: `python server/app.py`
+   - Server: `python server/src/app.py`
    - Client: `npm start`
 
 ## 3. Giới thiệu
