@@ -392,8 +392,8 @@ Hình 13: Quy trình giao tiếp khi upload file
 
 1. Clone repository hoặc tải source code trên moodle:
    ```
-   git clone https://github.com/petiheo/Transfer-Trail transfer-trail
-   cd transfer-trail
+   git clone https://github.com/petiheo/TransferTrail
+   cd transferTrail
    ```
 
 2. Cài đặt dependencies:
