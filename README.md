@@ -11,9 +11,10 @@
 8. [Giao thức giao tiếp (Protocol Communication)](#8-giao-thức-giao-tiếp-protocol-communication)
 9. [Xử lý File Lớn](#9-xử-lý-file-lớn)
 10. [Bảo mật](#10-bảo-mật)
-11. [Kết luận và Hướng phát triển](#11-kết-luận-và-hướng-phát-triển)
-12. [Phụ lục](#12-phụ-lục)
-13. [Tài liệu tham khảo](#13-tài-liệu-tham-khảo)
+11. [Mô tả và chức năng của các hàm](#11-mô-tả-và-chức-năng-của-các-hàm)
+12. [Kết luận và Hướng phát triển](#12-kết-luận-và-hướng-phát-triển)
+13. [Phụ lục](#13-phụ-lục)
+14. [Tài liệu tham khảo](#14-tài-liệu-tham-khảo)
 
 ## 1. Tổng quan
 
@@ -408,7 +409,111 @@ Hình 13: Quy trình giao tiếp khi upload file
 3. Áp dụng HTTPS cho giao tiếp giữa client và server.
 4. Triển khai cơ chế kiểm soát truy cập dựa trên vai trò.
 
-## 11. Kết luận và Hướng phát triển
+
+## 11. Mô tả chức năng của các hàm
+
+Phần này cung cấp một cái nhìn chi tiết về cách thức hoạt động và tương tác giữa các hàm, lớp, và phương thức trong hệ thống. Việc nghiên cứu phần này sẽ giúp thầy cô có được hiểu biết sâu hơn về cấu trúc và cơ chế vận hành của phần mềm. Tuy nhiên, cần lưu ý rằng những thông tin chi tiết này không phải là bắt buộc để nắm bắt được ý tưởng tổng thể và nguyên lý hoạt động cơ bản của ứng dụng.
+
+### 11.1. Phía Client
+
+#### 11.1.1. Python
+
+##### 11.1.1.1. Các hàm trong config.py
+
+- `load_config()`: Đọc file cấu hình JSON và trả về dữ liệu cấu hình.
+- Các biến cấu hình: HOST, SERVER_PORT, BUFFER_SIZE, FORMAT, NUMBER_OF_PARTS, RETRY_LIMIT, MIN_TIMEOUT, MAX_TIMEOUT, INITIAL_SPEED, CLIENT_DATA_PATH, DOWNLOADING_TEMP_PATH.
+
+##### 11.1.1.2. Các hàm trong download_file.py
+
+- `recv_file_from_server()`: Nhận một phần của file từ server.
+- `update_download_progress()`: Cập nhật và in tiến độ tải xuống.
+- `handle_thread()`: Xử lý việc tải xuống cho một phần cụ thể của file.
+- `download_file()`: Quản lý quá trình tải xuống toàn bộ file.
+
+##### 11.1.1.3. Các hàm trong list_files.py
+
+- `recv_list_from_server()`: Nhận danh sách file từ server.
+- `main()`: Khởi tạo kết nối và in danh sách file nhận được.
+
+##### 11.1.1.4. Các hàm trong upload_file.py
+
+- `update_upload_progress()`: Cập nhật và in tiến độ tải lên.
+- `send_file_to_server()`: Gửi một phần của file lên server.
+- `upload_file()`: Quản lý quá trình tải lên toàn bộ file.
+
+##### 11.1.1.5. Các hàm trong utils.py
+
+- `ensure_dir()`: Đảm bảo một thư mục tồn tại, tạo nếu chưa có.
+- `calculate_md5()`: Tính toán MD5 hash của một file.
+
+#### 11.1.2. Electron
+
+##### 11.1.2.1. Các hàm trong app.js
+
+- `createWindow()`: Tạo cửa sổ mới của ứng dụng Electron.
+- `createMainWindow()`: Tạo cửa sổ chính và thiết lập các xử lý IPC.
+
+##### 11.1.2.2. Các hàm trong ipcHandlers.js
+
+- `getFileList()`: Lấy danh sách file từ server thông qua script Python.
+- `uploadFile()`: Xử lý quá trình tải file lên server.
+- `downloadFile()`: Xử lý quá trình tải file xuống từ server.
+- `updateServerIp()`: Cập nhật địa chỉ IP của server trong file cấu hình.
+- `setupIpcHandlers()`: Thiết lập các xử lý IPC cho main process.
+
+##### 11.1.2.3. Các hàm trong preload.js
+
+- Expose các API an toàn cho renderer process thông qua `contextBridge`.
+
+##### 11.1.2.4. Các hàm trong fileHandlers.js
+
+- `handleFileUpload()`: Xử lý việc tải lên một file cụ thể.
+- `handleUpload()`: Xử lý sự kiện tải lên file từ giao diện người dùng.
+- `setupDragAndDrop()`: Thiết lập chức năng kéo và thả cho việc tải lên file.
+- `handleDownload()`: Xử lý sự kiện tải xuống file từ giao diện người dùng.
+
+##### 11.1.2.5. Các hàm trong main.js
+
+- `initializeApp()`: Khởi tạo ứng dụng, thiết lập các sự kiện và cập nhật giao diện.
+
+##### 11.1.2.6. Các hàm trong notifications.js
+
+- `showNotification()`: Hiển thị thông báo cho người dùng.
+
+##### 11.1.2.7. Các hàm trong uiHandlers.js
+
+- `updateFileList()`: Cập nhật danh sách file trên giao diện người dùng.
+- `initializeCategoryButtons()`: Khởi tạo các nút danh mục trên thanh bên.
+
+### 11.2. Phía Server
+
+#### 11.2.1. Các hàm trong app.py
+
+- `handle_client()`: Xử lý kết nối từ một client cụ thể.
+- `main()`: Khởi động server và lắng nghe các kết nối đến.
+
+#### 11.2.2. Các hàm trong download_handler.py
+
+- `send_file_to_client()`: Gửi một phần của file đến client.
+- `download_file()`: Quản lý quá trình gửi toàn bộ file đến client.
+
+#### 11.2.3. Các hàm trong file_list_handler.py
+
+- `send_file_list()`: Gửi danh sách file cho client.
+
+#### 11.2.4. Các hàm trong upload_handler.py
+
+- `recv_file_from_client()`: Nhận một phần của file từ client.
+- `handle_thread()`: Xử lý việc nhận file trong một thread riêng biệt.
+- `upload_file()`: Quản lý quá trình nhận toàn bộ file từ client.
+
+#### 11.2.5. Các hàm trong utils.py
+
+- `ensure_dir()`: Đảm bảo một thư mục tồn tại, tạo nếu chưa có.
+- `calculate_md5()`: Tính toán MD5 hash của một file.
+- `clean_temp_files()`: Dọn dẹp các file tạm thời sau khi hoàn thành quá trình tải lên.
+
+## 12. Kết luận và Hướng phát triển
 
 Transfer Trail đã đạt được mục tiêu ban đầu là cung cấp một giải pháp truyền file hiệu quả và đáng tin cậy. Dự án đã thành công trong việc:
 
@@ -424,16 +529,16 @@ Hướng phát triển trong tương lai:
 4. Cải thiện UI/UX dựa trên phản hồi của người dùng.
 5. Tối ưu hóa thuật toán nén để giảm dung lượng truyền tải.
 
-## 12. Phụ lục
+## 13. Phụ lục
 
-### 12.1 Thuật ngữ
+### 13.1 Thuật ngữ
 
 - **Electron**: Framework để xây dựng ứng dụng desktop đa nền tảng bằng công nghệ web.
 - **IPC (Inter-Process Communication)**: Cơ chế giao tiếp giữa các tiến trình trong Electron.
 - **Socket**: Điểm cuối của liên kết giao tiếp hai chiều giữa hai chương trình chạy trên mạng.
 - **MD5 Hash**: Thuật toán mã hóa được sử dụng để tạo "dấu vân tay" 128-bit cho một file.
 
-### 12.2 Cấu trúc Thư mục Dự án
+### 13.2 Cấu trúc Thư mục Dự án
 
 ```
 transfer-trail/
@@ -450,7 +555,7 @@ transfer-trail/
 └── README.md
 ```
 
-## 13. Tài liệu tham khảo
+## 14. Tài liệu tham khảo
 
 1. Electron Documentation. https://www.electronjs.org/docs/latest/
 2. Python Socket Programming. https://docs.python.org/3/library/socket.html
