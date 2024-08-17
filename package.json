@@ -1,0 +1,16 @@
+{
+  "name": "transfertrail-root",
+  "version": "1.0.0",
+  "main": "./client/src/electron/app.js",
+  "scripts": {
+    "start": "electron .",
+    "server": "node ./server/run-server.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "electron": "^31.3.1"
+  }
+}

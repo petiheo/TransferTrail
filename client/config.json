@@ -1,0 +1,11 @@
+{
+  "host": "192.168.1.4",
+  "serverPort": 8800,
+  "format": "utf8",
+  "numberOfParts": 12,
+  "retryLimit": 5,
+  "minTimeout": 5,
+  "maxTimeout": 300,
+  "bufferSize": 16777216,
+  "initialSpeed": 1000000
+}
