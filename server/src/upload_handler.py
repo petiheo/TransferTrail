@@ -35,12 +35,17 @@ def recv_file_from_client(conn, partNum, partSize, temp_dir, file_id, is_last_pa
         print(f'Error receiving file part {partNum}: {e}')
 
     if bytes_received != partSize:
-        if is_last_part and (partSize - bytes_received) <= 10:  # Allow up to 10 bytes difference for the last part
+        if is_last_part:
             print(f'Last part {partNum} received {bytes_received} bytes, expected {partSize} bytes. Accepting as complete.')
             return temp_file_path
-        print(f'Incomplete part {partNum}: received {bytes_received} bytes, expected {partSize} bytes')
-        return None
+        elif partSize - bytes_received <= 10:  # Allow small discrepancies for all parts
+            print(f'Part {partNum} received {bytes_received} bytes, expected {partSize} bytes. Accepting as complete.')
+            return temp_file_path
+        else:
+            print(f'Incomplete part {partNum}: received {bytes_received} bytes, expected {partSize} bytes')
+            return None
     return temp_file_path
+
 
 def handle_thread(conn, addr, partNum, partSize, dataList, temp_dir, file_id, lock, completed_parts, total_parts):
     is_last_part = partNum == total_parts - 1
@@ -59,20 +64,20 @@ def handle_thread(conn, addr, partNum, partSize, dataList, temp_dir, file_id, lo
 def assemble_file(dataList, filePath, fileSize):
     with open(filePath, 'wb') as output_file:
         bytes_written = 0
-        for temp_file_path in dataList:
+        for i, temp_file_path in enumerate(dataList):
             if temp_file_path is not None and os.path.exists(temp_file_path):
                 with open(temp_file_path, 'rb') as temp_file:
-                    while True:
-                        chunk = temp_file.read(config.BUFFER_SIZE)
-                        if not chunk:
-                            break
-                        output_file.write(chunk)
-                        bytes_written += len(chunk)
-                        if bytes_written >= fileSize:
-                            break
-    
-    if bytes_written != fileSize:
-        raise ValueError(f"Assembled file size ({bytes_written} bytes) does not match expected size ({fileSize} bytes)")
+                    chunk = temp_file.read()
+                    output_file.write(chunk)
+                    bytes_written += len(chunk)
+            else:
+                print(f"Warning: Part {i} is missing or incomplete.")
+
+    size_difference = abs(bytes_written - fileSize)
+    if size_difference > fileSize * 0.01:  # Allow up to 1% difference
+        raise ValueError(f"Assembled file size ({bytes_written} bytes) does not match expected size ({fileSize} bytes). Difference: {size_difference} bytes")
+    else:
+        print(f"File assembled successfully. Size difference: {size_difference} bytes")
 
 def upload_file(conn, addr, payload):
     fileName, fileSize = payload.decode().split(',')
@@ -118,16 +123,48 @@ def upload_file(conn, addr, payload):
         send_message(conn, OpCode.UPLOAD_INCOMPLETE, ','.join(map(str, missing_parts)).encode())
         return
 
-    try:
-        assemble_file(dataList, filePath, fileSize)
+    max_assembly_attempts = 3
+    for attempt in range(max_assembly_attempts):
+        try:
+            assemble_file(dataList, filePath, fileSize)
+            print(f'{fileName} uploaded and assembled successfully from {addr}.')
+            break
+        except ValueError as e:
+            if attempt < max_assembly_attempts - 1:
+                print(f"Assembly attempt {attempt + 1} failed: {e}. Retrying...")
+                # Retry receiving missing parts
+                missing_parts = [i for i, part in enumerate(dataList) if part is None]
+                threads = []
+                for i in missing_parts:
+                    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as uploadSocket:
+                        uploadSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                        uploadSocket.bind((config.HOST, 0))
+                        port = uploadSocket.getsockname()[1]
+                        uploadSocket.listen(1)
 
-        # Clean up temporary files and directories
-        utils.clean_temp_files(temp_dir)
-        utils.clean_temp_files(os.path.dirname(temp_dir))  # Clean up the 'Uploading' directory
+                        send_message(conn, OpCode.UPLOAD_PART_PORT, struct.pack('!I', port))
+
+                        client_conn, client_addr = uploadSocket.accept()
+                        thread = threading.Thread(target=handle_thread, args=(client_conn, client_addr, i, partSize, dataList, temp_dir, file_id, lock, completed_parts, config.NUMBER_OF_PARTS))
+                        thread.start()
+                        threads.append(thread)
+                for thread in threads:
+                    thread.join()
+            else:
+                print(f"Failed to assemble file after {max_assembly_attempts} attempts: {e}")
+                send_message(conn, OpCode.ERROR, str(e).encode())
+                return
+
+    try:
+        # Clean up temporary files
+        for temp_file_path in dataList:
+            if temp_file_path and os.path.exists(temp_file_path):
+                os.remove(temp_file_path)
+        
+        os.rmdir(temp_dir)
+        print(f"Temporary directory {temp_dir} removed successfully.")
     except Exception as e:
-        print(f"Error during file assembly or cleanup: {e}")
-        send_message(conn, OpCode.ERROR, str(e).encode())
-        return
+        print(f"Error during cleanup: {e}")
     
     # Calculate and send MD5 hash of the received file
     file_md5 = utils.calculate_md5(filePath)

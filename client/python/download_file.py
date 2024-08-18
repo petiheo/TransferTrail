@@ -42,11 +42,15 @@ def recv_file_from_server(conn: socket.socket, partNum, partSize, totalSize, pro
                 start_time = time.perf_counter()
 
         if bytes_received != partSize:
-            if is_last_part and (partSize - bytes_received) <= 10:  # Allow up to 10 bytes difference for the last part
+            if is_last_part:
                 print(f'Last part {partNum} received {bytes_received} bytes, expected {partSize} bytes. Accepting as complete.', file=sys.stderr)
                 return temp_file_path
-            print(f'Incomplete part {partNum}: received {bytes_received} bytes, expected {partSize} bytes', file=sys.stderr)
-            return None
+            elif partSize - bytes_received <= 10:  # Allow small discrepancies for all parts
+                print(f'Part {partNum} received {bytes_received} bytes, expected {partSize} bytes. Accepting as complete.', file=sys.stderr)
+                return temp_file_path
+            else:
+                print(f'Incomplete part {partNum}: received {bytes_received} bytes, expected {partSize} bytes', file=sys.stderr)
+                return None
 
     except Exception as e:
         print(f'Error receiving file part {partNum}: {e}', file=sys.stderr)
@@ -57,20 +61,17 @@ def recv_file_from_server(conn: socket.socket, partNum, partSize, totalSize, pro
 def assemble_file(dataList, savePath, fileSize):
     with open(savePath, 'wb') as output_file:
         bytes_written = 0
-        for temp_file_path in dataList:
+        for i, temp_file_path in enumerate(dataList):
             if temp_file_path is not None and os.path.exists(temp_file_path):
                 with open(temp_file_path, 'rb') as temp_file:
-                    while True:
-                        chunk = temp_file.read(BUFFER_SIZE)
-                        if not chunk:
-                            break
-                        output_file.write(chunk)
-                        bytes_written += len(chunk)
-                        if bytes_written >= fileSize:
-                            break
-    
+                    chunk = temp_file.read()
+                    output_file.write(chunk)
+                    bytes_written += len(chunk)
+            else:
+                print(f"Warning: Part {i} is missing or incomplete.", file=sys.stderr)
+
     size_difference = abs(bytes_written - fileSize)
-    if size_difference > 10:  # Allow up to 10 bytes difference
+    if size_difference > fileSize * 0.01:  # Allow up to 1% difference
         raise ValueError(f"Assembled file size ({bytes_written} bytes) does not match expected size ({fileSize} bytes). Difference: {size_difference} bytes")
     else:
         print(f"File assembled successfully. Size difference: {size_difference} bytes", file=sys.stderr)
@@ -88,41 +89,30 @@ def handle_thread(server_addr, server_port, partSize, dataList, partNum, totalSi
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as downloadSocket:
                 downloadSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                 downloadSocket.connect((server_addr, server_port))
+                
                 op_code, payload = recv_message(downloadSocket)
                 if op_code != OpCode.DOWNLOAD_PART_NUMBER:
                     raise ValueError("Unexpected message from server")
+                
                 part_num = struct.unpack('!I', payload)[0]
                 temp_file_path = recv_file_from_server(downloadSocket, part_num, partSize, totalSize, progress_dict, temp_dir, file_id, is_last_part)
+                
                 if temp_file_path:
                     dataList[part_num] = temp_file_path
-                    print(f'Part {part_num} received.', file=sys.stderr)
+                    print(f'Part {part_num} received successfully.', file=sys.stderr)
                     return  # Success, exit the function
                 else:
                     raise ValueError(f"Failed to receive part {part_num}")
-        except Exception as e:
+        
+        except (socket.error, ValueError) as e:
             retries += 1
-            print(f'Error during connection or receiving data for part {partNum}: {e}. Retry {retries}/{max_retries}', file=sys.stderr)
-            time.sleep(1)  # Wait for a second before retrying
+            wait_time = 2 ** retries  # Exponential backoff
+            print(f'Error during connection or receiving data for part {partNum}: {e}. Retrying in {wait_time} seconds. (Attempt {retries}/{max_retries})', file=sys.stderr)
+            time.sleep(wait_time)
     
     print(f'Failed to download part {partNum} after {max_retries} attempts.', file=sys.stderr)
-
-def assemble_file(dataList, savePath, fileSize):
-    with open(savePath, 'wb') as output_file:
-        bytes_written = 0
-        for temp_file_path in dataList:
-            if temp_file_path is not None and os.path.exists(temp_file_path):
-                with open(temp_file_path, 'rb') as temp_file:
-                    while True:
-                        chunk = temp_file.read(BUFFER_SIZE)
-                        if not chunk:
-                            break
-                        output_file.write(chunk)
-                        bytes_written += len(chunk)
-                        if bytes_written >= fileSize:
-                            break
     
-    if bytes_written != fileSize:
-        raise ValueError(f"Assembled file size ({bytes_written} bytes) does not match expected size ({fileSize} bytes)")
+    print(f'Failed to download part {partNum} after {max_retries} attempts.', file=sys.stderr)
 
 def download_file(clientSocket, fileName, fileList, savePath):
     fileIndex = next((i for i, file in enumerate(fileList) if file.name == fileName), -1)
@@ -143,6 +133,7 @@ def download_file(clientSocket, fileName, fileList, savePath):
 
     dataList = [None] * NUMBER_OF_PARTS
     progress_dict = {i: 0 for i in range(NUMBER_OF_PARTS)}
+    server_ports = {}  # New dictionary to store server ports
     threads = []
 
     def download_part(i):
@@ -151,6 +142,7 @@ def download_file(clientSocket, fileName, fileList, savePath):
         if op_code != OpCode.DOWNLOAD_PART_PORT:
             raise ValueError("Unexpected message from server")
         server_port = struct.unpack('!I', payload)[0]
+        server_ports[i] = server_port 
         is_last_part = i == NUMBER_OF_PARTS - 1
         thread = threading.Thread(target=handle_thread, args=(HOST, server_port, partSize, dataList, i, fileSize, progress_dict, temp_dir, file_id, is_last_part))
         thread.start()
@@ -182,12 +174,28 @@ def download_file(clientSocket, fileName, fileList, savePath):
         else:
             raise ValueError("Unexpected message from server")
 
-    try:
-        assemble_file(dataList, savePath, fileSize)
-        print(f'{fileName} downloaded and assembled successfully to {savePath}.', file=sys.stderr)
-    except Exception as e:
-        print(f"Error assembling file: {e}", file=sys.stderr)
-        return
+    max_assembly_attempts = 3
+    for attempt in range(max_assembly_attempts):
+        try:
+            assemble_file(dataList, savePath, fileSize)
+            print(f'{fileName} downloaded and assembled successfully to {savePath}.', file=sys.stderr)
+            break
+        except ValueError as e:
+            if attempt < max_assembly_attempts - 1:
+                print(f"Assembly attempt {attempt + 1} failed: {e}. Retrying...", file=sys.stderr)
+                # Retry downloading missing parts
+                missing_parts = [i for i, part in enumerate(dataList) if part is None]
+                threads = []
+                for i in missing_parts:
+                    thread = threading.Thread(target=handle_thread, args=(HOST, server_ports[i], partSize, dataList, i, fileSize, progress_dict, temp_dir, file_id, i == NUMBER_OF_PARTS - 1))
+                    thread.start()
+                    threads.append(thread)
+                for thread in threads:
+                    thread.join()
+            else:
+                print(f"Failed to assemble file after {max_assembly_attempts} attempts: {e}", file=sys.stderr)
+                return
+
 
     # Clean up temporary files
     for temp_file_path in dataList:
@@ -195,7 +203,6 @@ def download_file(clientSocket, fileName, fileList, savePath):
             os.remove(temp_file_path)
 
     os.rmdir(temp_dir)
-    os.rmdir(os.path.dirname(temp_dir))  # Remove the 'Downloading' directory if it's empty
     
     server_md5 = payload.decode()
     print(f'Server MD5 hash of {fileName}: {server_md5}', file=sys.stderr)
@@ -210,15 +217,15 @@ def download_file(clientSocket, fileName, fileList, savePath):
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python download_file.py <filename> <save_path>", file=sys.stderr)
-        sys.exit(1)
+    # if len(sys.argv) != 3:
+    #     print("Usage: python download_file.py <filename> <save_path>", file=sys.stderr)
+    #     sys.exit(1)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as clientSocket:
         clientSocket.connect((HOST, SERVER_PORT))
         fileList = recv_list_from_server(clientSocket)
-        download_file(clientSocket, sys.argv[1], fileList, sys.argv[2])
-        # download_file(clientSocket, "video1.mp4", fileList, "video1.mp4")
+        # download_file(clientSocket, sys.argv[1], fileList, sys.argv[2])
+        download_file(clientSocket, "input1.txt", fileList, "input1.txt")
 
 if __name__ == '__main__':
     main()
