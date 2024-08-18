@@ -134,9 +134,9 @@ def upload_file(client, filePath):
         print(f"WARNING: MD5 hash verification failed for {fileName}!", file=sys.stderr)
 
 def main():
-    if len(sys.argv) != 2:
-        print("Usage: python upload_file.py <file_path>", file=sys.stderr)
-        sys.exit(1)
+    # if len(sys.argv) != 2:
+    #     print("Usage: python upload_file.py <file_path>", file=sys.stderr)
+    #     sys.exit(1)
 
     filePath = sys.argv[1]
     if not os.path.exists(filePath):
@@ -146,7 +146,7 @@ def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
         client.connect((HOST, SERVER_PORT))
         upload_file(client, filePath)
-        # upload_file(client, "video1.mp4")
+        # upload_file(client, "index.html")
 
 if __name__ == '__main__':
     main()
