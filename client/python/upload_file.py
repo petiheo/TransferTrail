@@ -14,7 +14,7 @@ def update_upload_progress(partNum, bytes_sent, totalSize, progress_dict):
     progress_percentage = int((total_sent / totalSize) * 100)
     print(progress_percentage, flush=True)
 
-def send_file_to_server(filePath, partNum, startByte, endByte, server_addr, server_port, totalSize, progress_dict):
+def send_file_to_server(filePath, partNum, startByte, endByte, server_addr, server_port, totalSize, progress_dict, is_last_part):
     for attempt in range(RETRY_LIMIT):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client2:
             try:
@@ -27,8 +27,8 @@ def send_file_to_server(filePath, partNum, startByte, endByte, server_addr, serv
 
                 with open(filePath, "rb") as input_file:
                     input_file.seek(startByte)
-                    while partSize > 0:
-                        chunk = input_file.read(min(partSize, BUFFER_SIZE))
+                    while bytes_sent < partSize:
+                        chunk = input_file.read(min(partSize - bytes_sent, BUFFER_SIZE))
                         if not chunk:
                             break
                         
@@ -43,14 +43,19 @@ def send_file_to_server(filePath, partNum, startByte, endByte, server_addr, serv
                             speed_queue.append(chunk_speed)
                         
                         bytes_sent += chunk_size
-                        partSize -= chunk_size
                         
                         average_speed = sum(speed_queue) / len(speed_queue) if speed_queue else INITIAL_SPEED
-                        remaining_size = endByte - startByte + 1 - bytes_sent
+                        remaining_size = partSize - bytes_sent
                         dynamic_timeout = max(MIN_TIMEOUT, min(MAX_TIMEOUT, remaining_size / average_speed * 1.5))
                         client2.settimeout(dynamic_timeout)
 
                         update_upload_progress(partNum, bytes_sent, totalSize, progress_dict)
+
+                if bytes_sent != partSize:
+                    if is_last_part and (partSize - bytes_sent) <= 10:  # Allow up to 10 bytes difference for the last part
+                        print(f'Last part {partNum} sent {bytes_sent} bytes, expected {partSize} bytes. Accepting as complete.', file=sys.stderr)
+                        return True
+                    raise ValueError(f"Incomplete send for part {partNum}: sent {bytes_sent} bytes, expected {partSize} bytes")
 
                 print(f'Part {partNum} has been sent to server.', file=sys.stderr)
                 return True
@@ -76,7 +81,8 @@ def upload_file(client, filePath):
     progress_dict = {i: 0 for i in range(NUMBER_OF_PARTS)}
     threads = []
 
-    for i in range(NUMBER_OF_PARTS):
+    def upload_part(i):
+        nonlocal threads
         op_code, payload = recv_message(client)
         if op_code != OpCode.UPLOAD_PART_PORT:
             raise ValueError("Unexpected message from server")
@@ -84,31 +90,48 @@ def upload_file(client, filePath):
         
         startByte = i * partSize
         endByte = min(startByte + partSize - 1, fileSize - 1)
-        thread = threading.Thread(target=send_file_to_server, args=(filePath, i, startByte, endByte, HOST, server_port, fileSize, progress_dict))
+        is_last_part = i == NUMBER_OF_PARTS - 1
+        thread = threading.Thread(target=send_file_to_server, args=(filePath, i, startByte, endByte, HOST, server_port, fileSize, progress_dict, is_last_part))
         thread.start()
         threads.append(thread)
+
+    for i in range(NUMBER_OF_PARTS):
+        upload_part(i)
         time.sleep(0.1)
 
     for thread in threads:
         thread.join()
 
-    print(f'{fileName} uploaded to server successfully.', file=sys.stderr)
-    
-    # Receive and print MD5 hash from the server
-    op_code, payload = recv_message(client)
-    if op_code != OpCode.FILE_MD5:
-        raise ValueError("Unexpected message from server")
+    while True:
+        # Wait for server response
+        op_code, payload = recv_message(client)
+        if op_code == OpCode.UPLOAD_INCOMPLETE:
+            missing_parts = list(map(int, payload.decode().split(',')))
+            print(f"Upload incomplete. Missing parts: {missing_parts}", file=sys.stderr)
+            # Retry sending missing parts
+            threads = []
+            for i in missing_parts:
+                upload_part(i)
+            for thread in threads:
+                thread.join()
+        elif op_code == OpCode.ERROR:
+            print(f"Error during upload: {payload.decode()}", file=sys.stderr)
+            return
+        elif op_code == OpCode.FILE_MD5:
+            break
+        else:
+            raise ValueError("Unexpected message from server")
+
     server_md5 = payload.decode()
     print(f'Server MD5 hash of {fileName}: {server_md5}', file=sys.stderr)
     
-    # Calculate and print local MD5 hash of the uploaded file
     local_md5 = calculate_md5(filePath)
     print(f'Local MD5 hash of {fileName}: {local_md5}', file=sys.stderr)
     
     if server_md5 == local_md5:
-        print("MD5 hash verification successful.", file=sys.stderr)
+        print(f"{fileName} uploaded successfully. MD5 hash verification successful.", file=sys.stderr)
     else:
-        print("WARNING: MD5 hash verification failed!", file=sys.stderr)
+        print(f"WARNING: MD5 hash verification failed for {fileName}!", file=sys.stderr)
 
 def main():
     if len(sys.argv) != 2:
@@ -123,7 +146,7 @@ def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
         client.connect((HOST, SERVER_PORT))
         upload_file(client, filePath)
-        # upload_file(client, "input1.txt")
+        # upload_file(client, "video1.mp4")
 
 if __name__ == '__main__':
     main()
