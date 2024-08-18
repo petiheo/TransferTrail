@@ -134,9 +134,9 @@ def upload_file(client, filePath):
         print(f"WARNING: MD5 hash verification failed for {fileName}!", file=sys.stderr)
 
 def main():
-    # if len(sys.argv) != 2:
-    #     print("Usage: python upload_file.py <file_path>", file=sys.stderr)
-    #     sys.exit(1)
+    if len(sys.argv) != 2:
+        print("Usage: python upload_file.py <file_path>", file=sys.stderr)
+        sys.exit(1)
 
     filePath = sys.argv[1]
     if not os.path.exists(filePath):

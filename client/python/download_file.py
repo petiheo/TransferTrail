@@ -217,15 +217,15 @@ def download_file(clientSocket, fileName, fileList, savePath):
 
 
 def main():
-    # if len(sys.argv) != 3:
-    #     print("Usage: python download_file.py <filename> <save_path>", file=sys.stderr)
-    #     sys.exit(1)
+    if len(sys.argv) != 3:
+        print("Usage: python download_file.py <filename> <save_path>", file=sys.stderr)
+        sys.exit(1)
 
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as clientSocket:
         clientSocket.connect((HOST, SERVER_PORT))
         fileList = recv_list_from_server(clientSocket)
-        # download_file(clientSocket, sys.argv[1], fileList, sys.argv[2])
-        download_file(clientSocket, "input1.txt", fileList, "input1.txt")
+        download_file(clientSocket, sys.argv[1], fileList, sys.argv[2])
+        # download_file(clientSocket, "input1.txt", fileList, "input1.txt")
 
 if __name__ == '__main__':
     main()
