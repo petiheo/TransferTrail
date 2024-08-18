@@ -11,7 +11,7 @@
 8. [Giao thức giao tiếp (Protocol Communication)](#8-giao-thức-giao-tiếp-protocol-communication)
 9. [Xử lý File Lớn](#9-xử-lý-file-lớn)
 10. [Bảo mật](#10-bảo-mật)
-11. [Mô tả và chức năng của các hàm](#11-mô-tả-và-chức-năng-của-các-hàm)
+11. [Mô tả chức năng của các hàm](#11-mô-tả-chức-năng-của-các-hàm)
 12. [Kết luận và Hướng phát triển](#12-kết-luận-và-hướng-phát-triển)
 13. [Phụ lục](#13-phụ-lục)
 14. [Tài liệu tham khảo](#14-tài-liệu-tham-khảo)
@@ -320,12 +320,14 @@ Hình 11: Cấu trúc message
 | 4 | DOWNLOAD_RESPONSE |
 | 5 | DOWNLOAD_PART_PORT |
 | 6 | DOWNLOAD_PART_NUMBER |
-| 7 | UPLOAD_REQUEST |
-| 8 | UPLOAD_RESPONSE |
-| 9 | UPLOAD_PART_PORT |
-| 10 | UPLOAD_PART_NUMBER |
-| 11 | FILE_MD5 |
-| 12 | ERROR |
+| 7 | DOWNLOAD_INCOMPLETE |
+| 8 | UPLOAD_REQUEST |
+| 9 | UPLOAD_RESPONSE |
+| 10 | UPLOAD_PART_PORT |
+| 11 | UPLOAD_PART_NUMBER |
+| 12 | UPLOAD_INCOMPLETE |
+| 13 | FILE_MD5 |
+| 14 | ERROR |
 
 ### 8.3 Quy trình giao tiếp
 
@@ -346,7 +348,22 @@ sequenceDiagram
         Server->>Client: DOWNLOAD_PART_NUMBER
         Server->>Client: File part data
     end
-    Server->>Client: FILE_MD5
+    alt All parts received successfully
+        Server->>Client: FILE_MD5
+    else Some parts missing
+        Server->>Client: DOWNLOAD_INCOMPLETE
+        Client->>Server: Request missing parts
+        loop For each missing part
+            Server->>Client: DOWNLOAD_PART_PORT
+            Client->>Server: Connect to port
+            Server->>Client: DOWNLOAD_PART_NUMBER
+            Server->>Client: File part data
+        end
+        Server->>Client: FILE_MD5
+    end
+    Client->>Client: Verify MD5
+    Client->>Server: Confirmation
+
 ```
 
 Hình 12: Quy trình giao tiếp khi download file
@@ -366,8 +383,22 @@ sequenceDiagram
         Client->>Server: UPLOAD_PART_NUMBER
         Client->>Server: File part data
     end
-    Client->>Server: FILE_MD5
-    Server->>Client: Confirmation
+    alt All parts received successfully
+        Server->>Client: FILE_MD5
+    else Some parts missing
+        Server->>Client: UPLOAD_INCOMPLETE
+        Client->>Server: Send missing parts
+        loop For each missing part
+            Server->>Client: UPLOAD_PART_PORT
+            Client->>Server: Connect to port
+            Client->>Server: UPLOAD_PART_NUMBER
+            Client->>Server: File part data
+        end
+        Server->>Client: FILE_MD5
+    end
+    Client->>Client: Verify MD5
+    Client->>Server: Confirmation
+
 ```
 
 Hình 13: Quy trình giao tiếp khi upload file
@@ -421,14 +452,15 @@ Phần này cung cấp một cái nhìn chi tiết về cách thức hoạt đ�
 ##### 11.1.1.1. Các hàm trong config.py
 
 - `load_config()`: Đọc file cấu hình JSON và trả về dữ liệu cấu hình.
-- Các biến cấu hình: HOST, SERVER_PORT, BUFFER_SIZE, FORMAT, NUMBER_OF_PARTS, RETRY_LIMIT, MIN_TIMEOUT, MAX_TIMEOUT, INITIAL_SPEED, CLIENT_DATA_PATH, DOWNLOADING_TEMP_PATH.
+- Các biến cấu hình: `HOST`, `SERVER_PORT`, `BUFFER_SIZE`, `FORMAT`, `NUMBER_OF_PARTS`, `RETRY_LIMIT`, `MIN_TIMEOUT`, `MAX_TIMEOUT`, `INITIAL_SPEED`, `CLIENT_DATA_PATH`, `DOWNLOADING_TEMP_PATH`.
 
 ##### 11.1.1.2. Các hàm trong download_file.py
 
 - `recv_file_from_server()`: Nhận một phần của file từ server.
 - `update_download_progress()`: Cập nhật và in tiến độ tải xuống.
 - `handle_thread()`: Xử lý việc tải xuống cho một phần cụ thể của file.
-- `download_file()`: Quản lý quá trình tải xuống toàn bộ file.
+- `assemble_file()`: Lắp ráp các phần file đã tải xuống thành file hoàn chỉnh, cho phép sai số nhỏ trong kích thước cuối cùng.
+- `download_file()`: Quản lý quá trình tải xuống toàn bộ file, bao gồm xử lý các phần bị thiếu.
 
 ##### 11.1.1.3. Các hàm trong list_files.py
 
@@ -505,6 +537,7 @@ Phần này cung cấp một cái nhìn chi tiết về cách thức hoạt đ�
 
 - `recv_file_from_client()`: Nhận một phần của file từ client.
 - `handle_thread()`: Xử lý việc nhận file trong một thread riêng biệt.
+- `assemble_file()`: Lắp ráp các phần file đã nhận thành file hoàn chỉnh, cho phép sai số nhỏ trong kích thước cuối cùng.
 - `upload_file()`: Quản lý quá trình nhận toàn bộ file từ client.
 
 #### 11.2.5. Các hàm trong utils.py
@@ -548,9 +581,12 @@ transfer-trail/
 │   │   ├── electron/
 │   │   └── renderer/
 │   ├── python/
+│   ├── config.json
 │   └── package.json
 ├── server/
+│   ├── data/
 │   ├── src/
+│   └── config.json
 ├── images/
 └── README.md
 ```

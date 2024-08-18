@@ -1,5 +1,7 @@
 # Node modules
 node_modules/
+client/data/
+server/data/
 
 # Python cache
 __pycache__/
