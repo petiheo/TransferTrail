@@ -35,7 +35,7 @@ Báo cáo này trình bày chi tiết về kiến trúc, thiết kế và triể
 1. Clone repository hoặc tải source code trên moodle:
    ```
    git clone https://github.com/petiheo/TransferTrail
-   cd transferTrail
+   cd TransferTrail
    ```
 
 2. Cài đặt dependencies:
