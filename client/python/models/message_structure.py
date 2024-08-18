@@ -10,12 +10,14 @@ class OpCode(IntEnum):
     DOWNLOAD_RESPONSE = 4
     DOWNLOAD_PART_PORT = 5
     DOWNLOAD_PART_NUMBER = 6
-    UPLOAD_REQUEST = 7
-    UPLOAD_RESPONSE = 8
-    UPLOAD_PART_PORT =  9
-    UPLOAD_PART_NUMBER = 10 
-    FILE_MD5 = 11
-    ERROR = 12
+    DOWNLOAD_INCOMPLETE = 7
+    UPLOAD_REQUEST = 8
+    UPLOAD_RESPONSE = 9
+    UPLOAD_PART_PORT = 10
+    UPLOAD_PART_NUMBER = 11
+    UPLOAD_INCOMPLETE = 12
+    FILE_MD5 = 13
+    ERROR = 14
 
 class MessageHeader:
     def __init__(self, op_code, payload_length):
