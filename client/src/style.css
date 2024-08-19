@@ -111,7 +111,7 @@ h1 {
   left: 100%;
 }
 
-/* Animation for category change */
+/* Animation for category */
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -278,9 +278,7 @@ button:hover {
   animation-play-state: paused;
 }
 
-/* ... (existing styles) ... */
-
-/* Updated styles for download and upload items */
+/* Download and upload items */
 .downloads-list,
 .unfinished-list {
     display: flex;
@@ -345,7 +343,6 @@ button:hover {
     background-color: #5b6eae;
 }
 
-/* Update existing styles for unfinished list if needed */
 .unfinished-list {
     padding: 10px;
 }
