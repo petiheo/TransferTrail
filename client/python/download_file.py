@@ -225,7 +225,6 @@ def main():
         clientSocket.connect((HOST, SERVER_PORT))
         fileList = recv_list_from_server(clientSocket)
         download_file(clientSocket, sys.argv[1], fileList, sys.argv[2])
-        # download_file(clientSocket, "input1.txt", fileList, "input1.txt")
 
 if __name__ == '__main__':
     main()

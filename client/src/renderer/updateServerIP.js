@@ -13,12 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (result.success) {
                     showNotification('Success', 'Server IP updated successfully!', '', 'success');
                     
-                    // Update the file list
                     try {
                         await updateFileList();
                     } catch (updateError) {
                         console.error('Error updating file list:', updateError);
-                        // The error notification is now handled in updateFileList()
                     }
                 } else {
                     showNotification('Error', 'Failed to update server IP: ' + result.message, '', 'error');

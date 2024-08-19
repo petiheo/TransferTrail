@@ -146,7 +146,6 @@ def main():
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as client:
         client.connect((HOST, SERVER_PORT))
         upload_file(client, filePath)
-        # upload_file(client, "index.html")
 
 if __name__ == '__main__':
     main()
