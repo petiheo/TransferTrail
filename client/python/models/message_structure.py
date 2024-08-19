@@ -37,7 +37,7 @@ def send_message(conn, op_code, payload):
     conn.sendall(header.pack() + payload)
 
 def recv_message(conn):
-    header_data = recv_all(conn, 5)  # 1 byte for op_code, 4 bytes for payload_length
+    header_data = recv_all(conn, 5) 
     if not header_data:
         return None, None
     header = MessageHeader.unpack(header_data)
@@ -52,8 +52,6 @@ def recv_all(conn, n):
             return None
         data.extend(packet)
     return data
-
-# Utility functions for specific message types
 
 def send_file_list_request(conn):
     send_message(conn, OpCode.FILE_LIST_REQUEST, b'')

@@ -17,4 +17,4 @@ execFile(pythonType, [path.join(__dirname,'src' , 'app.py')], (error, stdout, st
     }
 });
 
-// this file handles the command to run the server depending on the operating system
+// This file handles the command to run the server depending on the operating system
